@@ -1,0 +1,185 @@
+#' Visualize Census vector hierarchies as ASCII tree
+#'
+#' @description Displays an ASCII tree representation of the hierarchical structure
+#' of Census vectors. This helps users understand the relationship between parent
+#' and child vectors when selecting variables for their analysis.
+#'
+#' @param vector A Census vector code (e.g., "v_CA16_2510") or a filtered tibble
+#'   as returned from \code{list_census_vectors}.
+#' @param dataset The dataset to query for vector information, e.g. \code{"CA16"}.
+#'   Only required if \code{vector} is a character string.
+#' @param max_depth Maximum depth of the tree to display. Default is \code{NA}
+#'   which shows the entire hierarchy.
+#' @param show_type Logical. If \code{TRUE}, shows the type (Total/Male/Female)
+#'   next to each vector. Default is \code{FALSE}.
+#' @param quiet When \code{TRUE}, suppress messages. Default is \code{FALSE}.
+#' @param language Language of the labels, one of \code{"en"} or \code{"fr"}. By default uses the language
+#'   \code{vector} was retrieved in, and otherwise the \code{cancensus.language} option, and \code{"en"}
+#'   if that is not set. See \code{\link{list_census_vectors}}.
+#'
+#' @return Invisibly returns a tibble of the vectors displayed in the tree.
+#'   The tree is printed to the console as a side effect.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Visualize the age hierarchy for 2016 Census
+#' visualize_vector_hierarchy("v_CA16_2510", dataset = "CA16")
+#'
+#' # Show only first two levels with type information
+#' visualize_vector_hierarchy("v_CA16_2510", dataset = "CA16",
+#'                            max_depth = 2, show_type = TRUE)
+#'
+#' # Using a vector tibble from list_census_vectors
+#' library(dplyr)
+#' list_census_vectors("CA16") %>%
+#'   filter(vector == "v_CA16_2510") %>%
+#'   visualize_vector_hierarchy()
+#' }
+visualize_vector_hierarchy <- function(vector, dataset = NULL, max_depth = NA,
+                                       show_type = FALSE, quiet = FALSE, language = NULL) {
+
+  language <- vector_list_language(vector, language)
+
+  # Handle input - either character vector code or tibble
+
+  if (is.character(vector)) {
+    if (is.null(dataset)) {
+      # Try to extract dataset from vector code
+      dataset <- tryCatch({
+        dataset_from_vector_list(vector)
+      }, error = function(e) {
+        cc_abort("dataset_from_vector_failed", .language = language)
+      })
+    }
+    dataset <- translate_dataset(dataset)
+
+    # Get the root vector info
+    all_vectors <- list_census_vectors(dataset, quiet = TRUE, language = language)
+    root_info <- all_vectors %>% dplyr::filter(.data$vector %in% !!vector)
+
+    if (nrow(root_info) == 0) {
+      cc_abort("vector_not_found", vectors = paste0("'", vector, "'"), dataset = dataset,
+               .language = language)
+    }
+  } else if (inherits(vector, "data.frame")) {
+    # It's a tibble from list_census_vectors
+    if (nrow(vector) == 0) {
+      cc_abort("empty_vector_tibble", .language = language)
+    }
+    dataset <- attr(vector, "dataset")
+    if (is.null(dataset)) {
+      dataset <- dataset_from_vector_list(vector)
+    }
+    dataset <- translate_dataset(dataset)
+    root_info <- vector
+    all_vectors <- list_census_vectors(dataset, quiet = TRUE, language = language)
+  } else {
+    cc_abort("invalid_vector_input", .language = language)
+  }
+
+  # Use first row if multiple vectors provided
+  if (nrow(root_info) > 1) {
+    if (!quiet) cc_inform("multiple_vectors", vector = root_info$vector[1], .language = language)
+    root_info <- root_info[1, ]
+  }
+
+  root_vector <- root_info$vector
+
+  # Get all children
+  children <- child_census_vectors(root_vector, leaves_only = FALSE, max_level = max_depth,
+                                   language = language)
+
+  # Combine root with children
+  tree_vectors <- dplyr::bind_rows(root_info, children)
+
+  # Build the tree structure
+  if (!quiet) {
+    message(cc_msg("vector_hierarchy_header", vector = root_vector, dataset = dataset,
+                   .language = language), "\n")
+  }
+
+  # Print root
+  root_label <- root_info$label
+  if (show_type) {
+    root_label <- paste0(root_label, " [", vector_type_label(root_info$type, language), "]")
+  }
+  cat(paste0(root_vector, ": ", root_label, "\n"))
+
+  # Recursively print children
+  print_children(root_vector, all_vectors, tree_vectors, prefix = "",
+                 show_type = show_type, current_depth = 1, max_depth = max_depth,
+                 language = language)
+
+  invisible(tree_vectors)
+}
+
+# The vector type for display, the type column keeps the English values in both languages
+vector_type_label <- function(type, language = NULL) {
+  ids <- c(Total = "vector_type_total", Male = "vector_type_male", Female = "vector_type_female")
+  # type is a factor, iterating over it directly would give the level codes
+  vapply(as.character(type), function(t) {
+    if (!is.na(t) && t %in% names(ids)) cc_msg(ids[[t]], .language = language) else as.character(t)
+  }, character(1), USE.NAMES = FALSE)
+}
+
+#' Internal function to recursively print tree children
+#' @noRd
+print_children <- function(parent_vector, all_vectors, tree_vectors, prefix,
+                           show_type, current_depth, max_depth, language = NULL) {
+
+  # Check depth limit
+
+if (!is.na(max_depth) && current_depth > max_depth) {
+    return(invisible(NULL))
+  }
+
+  # Find direct children of this parent that are in our tree
+  direct_children <- tree_vectors %>%
+    dplyr::filter(.data$parent_vector == !!parent_vector)
+
+  if (nrow(direct_children) == 0) return(invisible(NULL))
+
+  n_children <- nrow(direct_children)
+
+  for (i in seq_len(n_children)) {
+    child <- direct_children[i, ]
+    is_last <- (i == n_children)
+
+    # Determine connectors
+    connector <- if (is_last) "\u2514\u2500\u2500 " else "\u251C\u2500\u2500 "
+    child_prefix <- if (is_last) "    " else "\u2502   "
+
+    # Build label
+    label <- child$label
+    if (show_type) {
+      label <- paste0(label, " [", vector_type_label(child$type, language), "]")
+    }
+
+    # Check if this is a leaf; consult the full vector list so that nodes
+    # truncated by max_depth are not falsely labeled as leaves
+    has_children_in_tree <- any(tree_vectors$parent_vector == child$vector, na.rm = TRUE)
+    has_children_in_dataset <- any(all_vectors$parent_vector == child$vector, na.rm = TRUE)
+    leaf_indicator <- if (!has_children_in_dataset) {
+      paste0(" ", cc_msg("vector_tree_leaf", .language = language))
+    } else if (!has_children_in_tree) {
+      " ..."
+    } else {
+      ""
+    }
+
+    # Print this child
+    cat(paste0(prefix, connector, child$vector, ": ", label, leaf_indicator, "\n"))
+
+    # Recursively print grandchildren
+    print_children(child$vector, all_vectors, tree_vectors,
+                   prefix = paste0(prefix, child_prefix),
+                   show_type = show_type,
+                   current_depth = current_depth + 1,
+                   max_depth = max_depth,
+                   language = language)
+  }
+
+  invisible(NULL)
+}

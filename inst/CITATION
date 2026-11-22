@@ -1,0 +1,14 @@
+utils::citHeader("If you wish to cite cancensus:")
+
+utils::citEntry(entry = "manual",
+                author = c(
+                  person("Jens", "von Bergmann", email = "jens@mountainmath.ca", role = c("aut", "cre")),
+                  person("Dmitry", "Shkolnik", email = "shkolnikd@gmail.com", role = "aut"),
+                  person("Aaron", "Jacobs", email = "atheriel@gmail.com", role = "aut")),
+                title = "cancensus: R package to access, retrieve, and work with Canadian Census data and geography",
+                year = "2021",
+                note = {"R package version 0.4.2"},
+                url = "https://mountainmath.github.io/cancensus/",
+                textVersion = "von Bergmann, J., Dmitry Shkolnik, and Aaron Jacobs (2021). cancensus: R package to access, retrieve, and work with Canadian Census data and geography. v0.4.2."
+)
+

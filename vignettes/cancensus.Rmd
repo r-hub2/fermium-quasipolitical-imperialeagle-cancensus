@@ -1,0 +1,250 @@
+---
+title: "cancensus"
+author: "" 
+date: ""
+output: rmarkdown::html_vignette
+mainfont: Roboto
+
+vignette: >
+  %\VignetteIndexEntry{cancensus}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = nzchar(Sys.getenv("COMPILE_VIG"))
+)
+library(cancensus)
+library(dplyr)
+# set_cancensus_api_key(<your_api_key>', install = TRUE)
+# set_cancensus_cache_path(<local cache path>, install = TRUE)
+```
+# Cancensus and CensusMapper
+
+The **cancensus** package was developed to provide users with a way to access Canadian Census in a programmatic way following good [tidy data](http://vita.had.co.nz/papers/tidy-data.pdf) practices. While the structure and data in **cancensus** is unique to Canadian Census data, this package is inspired in part by [tidycensus](https://github.com/walkerke/tidycensus), a package to interface with the US Census Bureau data APIs. 
+
+As Statistics Canada does not provide direct API access to Census data, **cancensus** retrieves Census data indirectly through the [CensusMapper](https://censusmapper.ca) API. CensusMapper is a project by [Jens von Bergmann](https://github.com/mountainMath), one of the authors of **cancensus**, to provide interactive geographic visualizations of Canadian Census data. CensusMapper databases store all publicly available data from Statistics Canada for the 2006, 2011, and 2016 Censuses. CensusMapper data can be accessed via an API and **cancensus** is built to interface directly with it. 
+
+## API Key
+
+**cancensus** requires a valid CensusMapper API key to use. You can obtain a free API key by [signing up](https://censusmapper.ca/auth/register) for a CensusMapper account. CensusMapper API keys are free and public API quotas are generous; however, due to incremental costs of serving large quantities of data, there limits to API usage in place. For most use cases, these API limits should not be an issue. Production uses with large extracts of fine grained geographies may run into API quota limits. For larger quotas, please get in touch with Jens [directly](mailto:jens@censusmapper.ca).  
+
+To check your API key, just go to "Edit Profile" (in the top-right of the CensusMapper menu bar). Once you have your key, you can store it in your system environment so it is automatically used in API calls. To do so just enter `set_cancensus_api_key(<your_api_key>, install = TRUE)`
+
+## Installing cancensus
+
+The stable version of **cancensus** can be easily installed from CRAN.
+```{r load_package_cran, echo=TRUE, message=FALSE, warning=FALSE, eval = FALSE}
+install.packages("cancensus")
+
+library(cancensus)
+```
+
+Alternatively, the latest development version can be installed from Github using `remotes``. 
+```{r load_package_git, echo=TRUE, message=FALSE, warning=FALSE, eval = FALSE}
+# install.packages("devtools")
+remotes::install_github("mountainmath/cancensus")
+
+library(cancensus)
+```
+
+If you have not already done so, you can install the API keys and the data cache path. You can get your free API key when you sign up for a [CensusMapper account](https://censusmapper.ca/) and check your profile. Additionally we recommend you set a permanent data cache path so that census data you query is stored persistently across sessions. **Make sure to replace the filler text `<your_api_key>` and `<local cache path>` with your actual API key and local cache path.**
+
+```{r install_api_key_and_cache_path, echo=TRUE, message=FALSE, warning=FALSE, eval = FALSE}
+# Only need to install api key can cache path once
+set_cancensus_api_key('<your_api_key>', install = TRUE)
+set_cancensus_cache_path('<local cache path>', install = TRUE)
+```
+
+Data in the persistent cache can be managed via the functions `list_cancensus_cache` and `remove_from_cancensus_cache` if needed.
+
+If a project should have its own cache, for example to back up the data with the project for reproducibility, set the cache path without `install = TRUE` at the top of a script. This applies for the current R session and takes precedence over the cache path stored in your `.Renviron`. Use an absolute path and set it before the first call to `get_census`, see `?set_cancensus_cache_path` for details.
+
+```{r project_cache_path, echo=TRUE, eval = FALSE}
+set_cancensus_cache_path(here::here("data/cancensus_cache"))
+```
+
+# Accessing Census Data
+
+**cancensus** provides three different functions for retrieving Census data:
+* `get_census` to retrieve Census data and geography as a spatial dataset
+* `get_census_data` to retrieve Census data only as a flat data frame
+* `get_census_geometry` to retrieve Census geography only as a collection of spatial polygons.
+
+`get_census` takes as inputs a dataset parameter, a list of specified regions, a vector of Census variables, and a Census geography level. You can specify one of three options for spatial formats: `NA` to return data only, `sf` to return an sf-class data frame, or `sp` to return a SpatialPolygonsDataFrame object. 
+
+The `labels` parameter of `get_census` controls how columns are named and labelled. It currently defaults to `labels = "detailed"`, but this is planned to change to `labels = "labelled"` in a future version. To make sure your code keeps working when the default changes, set the `cancensus.labels` option to apply a choice to all `get_census` calls in a script or session, or set the `labels` parameter in individual calls. Without either one, `get_census` shows a message once per session pointing this out. We recommend adopting `"labelled"` early, and set the option for all calls in this vignette.
+
+```{r set_labels_option, echo=TRUE}
+options(cancensus.labels = "labelled")
+```
+
+```{r get_census example, echo=TRUE, warning=FALSE, message=FALSE}
+# Returns a data frame with data only
+census_data <- get_census(dataset='CA21', regions=list(CMA="59933"),
+                          vectors=c("v_CA21_434","v_CA21_435","v_CA21_440"),
+                          level='CSD', use_cache = FALSE, geo_format = NA, quiet = TRUE)
+
+# Returns data and geography as an sf-class data frame
+census_data <- get_census(dataset='CA21', regions=list(CMA="59933"),
+                          vectors=c("v_CA21_434","v_CA21_435","v_CA21_440"),
+                          level='CSD', use_cache = FALSE, geo_format = 'sf', quiet = TRUE)
+
+# Returns a SpatialPolygonsDataFrame object with data and geography
+census_data <- get_census(dataset='CA21', regions=list(CMA="59933"),
+                          vectors=c("v_CA21_434","v_CA21_435","v_CA21_440"),
+                          level='CSD', use_cache = FALSE, geo_format = 'sp', quiet = TRUE)
+```
+
+**cancensus** utilizes caching to increase speed, minimize API token usage, and to make data available offline. Downloaded data is hashed and stored locally so if a call is made to access the same data, **cancensus** will read the local version instead. To force **cancensus** to refresh the data, specify `use_cache = FALSE` as a parameter for `get_census`. 
+
+Additional parameters for advanced options can be viewed by running `?get_census`.
+
+## Column names and labels
+
+With `labels = "labelled"` Census variables are named by their vector, or by the name you give them when naming `vectors`, and the other columns have short names like `Name` and `Area` that are the same across datasets and with or without geographic data. The full description of each column is stored in its `"label"` attribute, which is displayed e.g. by the RStudio data viewer.
+
+```{r labelled_columns, echo=TRUE, warning=FALSE, message=FALSE}
+census_data <- get_census(dataset='CA21', regions=list(CMA="59933"),
+                          vectors=c(average_age="v_CA21_386","v_CA21_434"),
+                          level='CSD', quiet = TRUE)
+names(census_data)
+attr(census_data$Population, "label")
+attr(census_data$average_age, "label")
+attr(census_data$v_CA21_434, "label")
+```
+
+The labels of the Census variables are also available through `label_vectors(census_data)`, and the `language` parameter of `get_census` switches labels to French where available.
+
+Recent versions of `ggplot2` use these labels as default axis and legend titles. Be careful with columns you compute yourself: R keeps attributes through arithmetic, so a derived column inherits a label that no longer describes it. Set the title explicitly with `labs()`, or drop the label with `as.numeric()`.
+
+```{r derived_columns, echo=TRUE}
+dwellings_per_person <- census_data$Dwellings / census_data$Population
+attr(dwellings_per_person, "label")
+attr(as.numeric(dwellings_per_person), "label")
+```
+
+## Census Datasets
+
+**cancensus** can access Statistics Canada Census data for Census years 1996, 2001, 2006, 2011, 2016, and 2021. You can run `list_census_datasets` to check what datasets are currently available for access through the CensusMapper API. 
+
+Thanks to contributions by the Canada Mortgage and Housing Corporation (CMHC), **cancensus** now includes additional Census-linked datasets as open-data releases. These include annual taxfiler data at the census tract level for tax years 2000 through 2017, which includes data on incomes and demographics, as well as specialized crosstabs for Structural type of dwelling by Document type, which details occupancy status for residences. These crosstabs are available for the 2001, 2006, 2011, and 2016 Census years at all levels starting with census tract.
+
+The function `list_census_datasets()` will show all available datasets alongside their metadata.
+
+```{r list datasets, message=FALSE, warning=FALSE}
+list_census_datasets()
+```
+
+As other Census datasets become available via the CensusMapper API, they will be listed as output when calling `list_census_datasets()`. 
+
+## Census Regions
+
+Census data is aggregated at multiple [geographic levels](### Census Geographic Levels). Census geographies at the national (C), provincial (PR), census metropolitan area (CMA), census agglomeration (CA), census division (CD), and census subdivision (CSD) are defined as named census regions. 
+
+Canadian Census geography can change in between Census periods. **cancensus** provides a function, `list_census_regions(dataset)`, to display all named census regions and their corresponding id for a given census dataset. 
+
+```{r list regions, message=FALSE, warning=FALSE}
+list_census_regions("CA21")
+```
+
+The `regions` parameter in `get_census` requires as input a list of region id strings that correspond to that regions geoid. You can combine different regions together into region lists.
+
+```{r, message=FALSE, warning=FALSE}
+# Retrieves Vancouver and Toronto
+list_census_regions('CA21') %>% 
+  filter(level == "CMA", name %in% c("Vancouver","Toronto"))
+
+census_data <- get_census(dataset='CA21', regions=list(CMA=c("59933","35535")),
+                          vectors=c("v_CA21_434","v_CA21_435","v_CA21_440"),
+                          level='CSD', use_cache = FALSE, quiet = TRUE)
+```
+
+## Census Geographic Levels
+
+Census data accessible through **cancensus** comes is available in a number of different aggregation levels including: 
+
+| Code    | Description                    | Count in Census 2016 |
+| --------|--------------------------------|:--------------------:|
+| C       | Canada (total)                 | 1                    |
+| PR      | Provinces/Territories          | 13                   |
+| CMA     | Census Metropolitan Area       | 35                   |
+| CA      | Census Agglomeration           | 14                   |
+| CD      | Census Division                | 287                  |
+| CSD     | Census Subdivision             | 713                  |
+| CT      | Census Tracts                  | 5621                 |
+| DA      | Dissemination Area             | 56589                |
+| EA      | Enumeration Area (1996 only)   | -                    |
+| DB      | Dissemination Block (2001-2016)| 489676               |
+| Regions | Named Census Region            |                      |
+
+Selecting `regions = "59933"` and `level = "CT"` will return data for all 478 census tracts in the Vancouver Census Metropolitan Area. Selecting `level = "DA"` will return data for all 3450 dissemination areas and selecting `level = "DB"` will retrieve data for 15,197 dissemination block. Working with CT, DA, EA, and especially DB level data significantly increases the size of data downloads and API usage. To help minimize additional overhead, **cancensus** supports local data caching to reduce usage and load times. 
+
+Setting `level = "Regions"` will produce data strictly for the selected region without any tiling of data at lower census aggregation levels levels. 
+
+# Working with Census Variables
+
+Census data contains thousands of different geographic regions as well as thousands of unique variables. In addition to enabling programmatic and reproducible access to Census data, **cancensus** has a number of tools to help users find the data they are looking for. 
+
+## Displaying available Census variables
+
+Run `list_census_vectors(dataset)` to view all available Census variables for a given dataset. 
+
+```{r list_vectors, message=FALSE, warning=FALSE}
+list_census_vectors("CA21")
+```
+
+## Variable characteristics
+
+For each variable (vector) in that Census dataset, this shows:
+
+* Vector: short variable code 
+* Type: variables are provided as aggregates of female responses, male responses, or total (male+female) responses
+* Label: detailed variable name
+* Units: provides information about whether the variable represents a count integer, a ratio, a percentage, or a currency figure
+* Parent_vector: shows the immediate hierarchical parent category for that variable, where appropriate
+* Aggregation: indicates how the variable should be aggregated with others, whether it is additive or if it is an average of another variable
+* Description: a rough description of a variable based on its hierarchical structure. This is constructed by **cancensus** by recursively traversing the labels for every variable's hierarchy, and facilitates searching for specific variables using key terms. 
+
+## Variable search
+
+Each Census dataset features numerous variables making it a bit of a challenge to find the exact variable you are looking for. There is a function, `find_census_vectors()`, for searching through Census variable metadata in a few different ways. There are three types of searches possible using this function: exact search, which simply looks for exact string matches for a given query against the vector dataset; keyword search, which breaks vector metadata into unigram tokens and then tries to find the vectors with the greatest number of unique matches; and, semantic search which works better with search phrases and has tolerance for inexact searches. Switching between search modes is done using the `query_type` argument when calling `find_census_variables()` function. 
+
+```{r search_vectors1, message=FALSE, warning=FALSE}
+# Find the variable indicating the number of people of Austrian ethnic origin
+find_census_vectors("Australia", dataset = "CA16", type = "total", query_type = "exact")
+
+find_census_vectors("Australia origin", dataset = "CA16", type = "total", query_type = "semantic")
+
+find_census_vectors("Australian ethnic", dataset = "CA16", type = "total", query_type = "keyword", interactive = FALSE)
+```
+
+## Managing variable hierarchy 
+
+Census variables are frequently hierarchical. As an example, consider the variable for the number of people of Austrian ethnic background. We can select that vector and quickly look up its entire hierarchy using `parent_census_vectors` on a vector list.  
+
+```{r parent_vectors, message=FALSE, warning=FALSE}
+list_census_vectors("CA16") %>% 
+  filter(vector == "v_CA16_4092") %>% 
+  parent_census_vectors()
+```
+
+Sometimes we want to traverse the hierarchy in the opposite direction. This is frequently required when looking to compare different variable stems that share the same aggregate variable. As an example, if we want to look the total count of Northern European ethnic origin respondents disaggregated by individual countries, it is pretty easy to do so. 
+
+```{r child_vectors1, message=FALSE, warning=FALSE}
+# Find the variable indicating the Northern European aggregate
+find_census_vectors("Northern European", dataset = "CA16", type = "Total")
+```
+
+The search result shows that the vector **v_CA16_4092** represents the aggregate for all Northern European origins. The `child_census_vectors` function can return a list of its constituent underlying variables.
+
+```{r child_vectors2, message=FALSE, warning=FALSE}
+# Show all child variable leaves
+list_census_vectors("CA16") %>% 
+  filter(vector == "v_CA16_4122") %>% child_census_vectors(leaves = TRUE)
+```
+
+The `leaves = TRUE` parameter specifies whether intermediate aggregates are included or not. If `TRUE` then only the lowest level variables are returns - the "leaves" of the hierarchical tree. 

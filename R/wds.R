@@ -1,0 +1,220 @@
+#' Query the StatCan WDS for metadata
+#'
+#' @description
+#' Get official metadata information from Statistics Canada for a given geographic level. Only available for the 2021 census.
+#' Data is cached for the duration of the R session.
+#'
+#' @param census_year census year to get the data for, right now only 2021 is supported
+#' @param level geographic level to return the data for, valid choices are
+#' "PR","CD","CMACA","CSD","CT","ADA","DA","ER","FED","DPL","POPCNTR", "FSA", "HR"
+#' @param version optionally specify a version of the data to download. For example, for FED level data, version 1.3 will
+#' access the 2013 represenation order, whereas version 2.0 will access the 2023 representation order. By default the latest
+#' available version is accessed.
+#' @param refresh default is `FALSE` will refresh the temporary cache if `TRUE`
+#' @return tibble with the metadata
+#'
+#' @examples
+#' # get metadata for federal electoral districts
+#' \dontrun{
+#' get_statcan_wds_metadata(census_year="2021",level="FED")
+#' }
+#' @export
+get_statcan_wds_metadata <- function(census_year,level,version=NULL,refresh=FALSE){
+  valid_census_years <- c("2021")
+  valid_levels <- c("PR","CD","CMACA","CSD","CT","ADA","DA","ER","FED","DPL","POPCNTR","FSA","HR")
+  if (!(census_year %in% valid_census_years)) {
+    cc_abort("invalid_census_year", choices = valid_census_years)
+  }
+  if (!(level %in% valid_levels)) {
+    cc_abort("invalid_level_choice", choices = valid_levels)
+  }
+  meta_url <- paste0("https://api.statcan.gc.ca/census-recensement/profile/sdmx/rest/dataflow/STC_CP/DF_",level,
+                     ifelse(is.null(version),"",paste0("/",version)),
+                     "?references=all")
+  metadata_tempfile <- file.path(tempdir(),paste0("census_wds_metadata_",digest::digest(meta_url),".sdmx"))
+  if (refresh || !file.exists(metadata_tempfile)) {
+    # Download to a temporary file and only keep what parses as metadata, so that error pages and
+    # interrupted downloads don't get read back as cached metadata on the next call
+    tmp <- tempfile(fileext = ".sdmx")
+    on.exit(unlink(tmp), add = TRUE)
+    # httr's default Accept header prefers JSON, ask for SDMX-ML explicitly
+    response <- wds_GET(meta_url,
+                        httr::accept("application/vnd.sdmx.structure+xml;version=2.1"),
+                        httr::write_disk(tmp, overwrite = TRUE))
+    if (httr::http_error(response) || !is_wds_metadata_file(tmp)) {
+      cc_abort("wds_metadata_unavailable", level = level, status = httr::status_code(response))
+    }
+    file.copy(tmp, metadata_tempfile, overwrite = TRUE)
+  }
+  d <- xml2::read_xml(metadata_tempfile)
+  code_lists <- xml2::xml_find_all(d,"//structure:Codelist")
+
+  meta_data <- lapply(code_lists, function(cl){
+    codelist_id <- cl %>% xml2::xml_attr("id")
+    agencyID <- cl %>% xml2::xml_attr("agencyID")
+    codelist_en <- cl %>% xml2::xml_find_all("common:Name[@xml:lang='en']") %>% xml2::xml_text()
+    codelist_fr <- cl %>% xml2::xml_find_all("common:Name[@xml:lang='fr']") %>% xml2::xml_text()
+    codes <- cl %>% xml2::xml_find_all("structure:Code")
+    dplyr::tibble(`Agency ID`=agencyID,
+           `Codelist ID`=codelist_id,
+           `Codelist en`=codelist_en,
+           `Codelist fr`=codelist_fr,
+           ID=codes %>% xml2::xml_attr("id"),
+           en=codes %>% xml2::xml_find_all("common:Name[@xml:lang='en']") %>% xml2::xml_text(),
+           fr=codes %>% xml2::xml_find_all("common:Name[@xml:lang='fr']") %>% xml2::xml_text(),
+           # xml_find_first is vectorized over the nodeset in C and returns
+           # NA for codes without a parent node
+           `Parent ID`=codes %>% xml2::xml_find_first("structure:Parent/Ref") %>%
+             xml2::xml_attr("id")
+             )
+  }) %>%
+    dplyr::bind_rows()
+ meta_data
+}
+
+#' Query the StatCan WDS for data
+#'
+#' @description
+#' Get official census data from Statistics Canada for a given set of DGUIDs. Only available for the 2021 census. The
+#' downloaded data gets enriched by geographic and characteristic names based on metadata obtained via `get_statcan_wds_metadata()`.
+#' Data is cached for the duration of the R session.
+#'
+#' @param DGUIDs census year to get the data for, right now only 2021 is supported. Valid DGUIDs for a given geographic
+#' level can be queried via `get_statcan_wds_metadata()`.
+#' @param members list of Member IOs to download data for. By default all characteristics are downloaded. Valid
+#' Member IDs and their descriptions can be queried via the `get_statcan_wds_metadata()` call.
+#' @param version optionally specify a version of the data to download. For example, for FED level data, version 1.3 will
+#' access the 2013 represenation order, whereas version 2.0 will access the 2023 representation order. By default the latest
+#' available version is accessed.
+#' @param gender optionally query data for only one gender. By default this queries data for all genders, possible
+#' values are "Total", "Male", "Female" to only query total data, or for males only or for females only.
+#' @param language specify language for geography and characteristic names that get added, valid choices are "en" and "fr"
+#' @param refresh default is `FALSE` will refresh the temporary cache if `TRUE`
+#' @return tibble with the enriched census data
+#'
+#' @examples
+#' # get data for federal electoral district 2013A000459021
+#' \dontrun{
+#' get_statcan_wds_data(DGUIDs="2013A000459021",level="FED")
+#' }
+#' @export
+get_statcan_wds_data <- function(DGUIDs,
+                           members = NULL,
+                           version= NULL,
+                           gender="All",
+                           language="en",
+                           refresh=FALSE) {
+  DGUIDs <- sort(DGUIDs)
+  members <- sort(members)
+  level <- geo_level_from_DGUID(DGUIDs[1], language = language)
+  url <- paste0("https://api.statcan.gc.ca/census-recensement/profile/sdmx/rest/data/STC_CP")
+  gender <- tolower(gender)
+  gender <- paste0(toupper(substr(gender,1,1)),substr(gender,2,100))
+  valid_genders <- c("All","Total","Male","Female")
+  if (!(gender %in% valid_genders)) {
+    cc_abort("invalid_gender", choices = valid_genders, .language = language)
+  }
+  language <- validate_language(language)
+  gender <- c("All"="","Total"="1","Male"="2","Female"="3")[[gender]]
+  dguid_string <- paste0(DGUIDs,collapse="+")
+  member_string <- paste0(members,collapse = "+")
+  add=paste0("DF_",level,ifelse(is.null(version),"",paste0(",",version)),"/A5.",dguid_string,".",gender,".",member_string,".1")
+  wds_data_tempfile <- file.path(tempdir(),paste0("wds_data_",digest::digest(add),".csv"))
+  if (refresh || !file.exists(wds_data_tempfile)) {
+    # Download to a temporary file, write_disk persists the body even on failure and an error
+    # response should not get read back as cached data on the next call
+    tmp <- tempfile(fileext = ".csv")
+    on.exit(unlink(tmp), add = TRUE)
+    response <- wds_GET(paste0(url,",",add),
+                        httr::accept("text/csv"),
+                        httr::add_headers("Accept-Encoding"="deflate, gzip, br"),
+                        httr::write_disk(tmp,overwrite = TRUE),
+                        language = language)
+    if (httr::status_code(response)!=200) {
+      error_content <- tryCatch(httr::content(response), error = function(e) "")
+      cc_abort("wds_invalid_request", details = paste0(as.character(error_content), collapse = "\n"),
+               .language = language)
+    }
+    file.copy(tmp, wds_data_tempfile, overwrite = TRUE)
+  }
+  census_year <- "2021"
+  meta_data <- get_statcan_wds_metadata(census_year,level=level,version = version,refresh = refresh)
+
+  levels <- meta_data %>%
+    dplyr::filter(.data$`Codelist ID`=="CL_GEO_LEVEL")
+
+  meta_geos <- meta_data %>%
+    dplyr::filter(.data$`Codelist ID`==paste0("CL_GEO_",level))
+  meta_characteristics <- meta_data %>%
+    dplyr::filter(.data$`Codelist ID`=="CL_CHARACTERISTIC")
+
+  name_field <- language #paste0(language,"_description")
+
+  data <- readr::read_csv(wds_data_tempfile,col_types = readr::cols(.default="c")) %>%
+    dplyr::mutate(dplyr::across(dplyr::matches("OBS_VALUE|TNR_CI_"),as.numeric)) %>%
+    dplyr::left_join(meta_geos %>%
+                       dplyr::select(GEO_DESC="ID",GEO_NAME=!!as.name(name_field)),
+                     by="GEO_DESC") %>%
+    dplyr::left_join(meta_characteristics %>%
+                       dplyr::select(CHARACTERISTIC="ID",CHARACTERISTIC_NAME=!!as.name(name_field)),
+              by="CHARACTERISTIC")
+
+  data
+}
+
+
+
+# Requests to the Statistics Canada API. Failed certificate checks get explained, they have been a
+# recurring problem with this server. httr raises these as errors instead of returning a response.
+wds_GET <- function(url, ..., language = NULL){
+  tryCatch(httr::GET(url, ...), error = function(e) {
+    if (inherits(e, "curl_error_peer_failed_verification") ||
+        grepl("SSL|certificate", conditionMessage(e), ignore.case = TRUE)) {
+      cc_abort("wds_ssl_error", error = paste0(strwrap(conditionMessage(e),80),collapse = "\n"),
+               .language = language)
+    }
+    stop(e)
+  })
+}
+
+is_wds_metadata_file <- function(path){
+  # documents without the namespace warn before failing
+  tryCatch(suppressWarnings(length(xml2::xml_find_all(xml2::read_xml(path),"//structure:Codelist"))>0),
+           error = function(e) FALSE)
+}
+
+geo_level_from_DGUID <- function(DGUID,simple=TRUE,language=NULL){
+  schema <- substr(as.character(DGUID),6,9)
+  schema_to_level <- c("0000"="C","0001"="C",
+                       "0002"="PR",
+                       "0003"="CD",
+                       "0004"="FED",
+                       "0005"="CSD",
+                       "0006"="DPL",
+                       "0007"="HR",
+                       "0008"="LHR",
+                       "0011"="FSA",
+                       "0500"="ER",
+                       "0501"="CAR",
+                       "0502"="CCSD",
+                       "0503"="CMA",
+                       "0504"="CA",
+                       "0505"="CMAP",
+                       "0507"="CT",
+                       "0510"="PC",
+                       "0511"="PCP",
+                       "0512"="DA",
+                       "0513"="DB",
+                       "0516"="ADA")
+  if (length(schema)!=1 || !(schema %in% names(schema_to_level))) {
+    cc_abort("invalid_dguid", dguid = DGUID, .language = language)
+  }
+  level <- schema_to_level[[schema]]
+  if (simple){
+    simple_translation <- c("LHR"="HR","CMA"="CMACA","CA"="CMACA","CMAP"="CMACA")
+    if (level %in% names(simple_translation)) level <- simple_translation[[level]]
+  }
+  level
+}
+
+

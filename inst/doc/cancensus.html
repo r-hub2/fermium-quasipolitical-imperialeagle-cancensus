@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content />
+
+
+<title>cancensus</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">cancensus</h1>
+<h4 class="author"></h4>
+
+
+
+<div id="cancensus-and-censusmapper" class="section level1">
+<h1>Cancensus and CensusMapper</h1>
+<p>The <strong>cancensus</strong> package was developed to provide users
+with a way to access Canadian Census in a programmatic way following
+good <a href="http://vita.had.co.nz/papers/tidy-data.pdf">tidy data</a>
+practices. While the structure and data in <strong>cancensus</strong> is
+unique to Canadian Census data, this package is inspired in part by <a href="https://github.com/walkerke/tidycensus">tidycensus</a>, a package
+to interface with the US Census Bureau data APIs.</p>
+<p>As Statistics Canada does not provide direct API access to Census
+data, <strong>cancensus</strong> retrieves Census data indirectly
+through the <a href="https://censusmapper.ca">CensusMapper</a> API.
+CensusMapper is a project by <a href="https://github.com/mountainMath">Jens von Bergmann</a>, one of the
+authors of <strong>cancensus</strong>, to provide interactive geographic
+visualizations of Canadian Census data. CensusMapper databases store all
+publicly available data from Statistics Canada for the 2006, 2011, and
+2016 Censuses. CensusMapper data can be accessed via an API and
+<strong>cancensus</strong> is built to interface directly with it.</p>
+<div id="api-key" class="section level2">
+<h2>API Key</h2>
+<p><strong>cancensus</strong> requires a valid CensusMapper API key to
+use. You can obtain a free API key by <a href="https://censusmapper.ca/auth/register">signing up</a> for a
+CensusMapper account. CensusMapper API keys are free and public API
+quotas are generous; however, due to incremental costs of serving large
+quantities of data, there limits to API usage in place. For most use
+cases, these API limits should not be an issue. Production uses with
+large extracts of fine grained geographies may run into API quota
+limits. For larger quotas, please get in touch with Jens <a href="mailto:jens@censusmapper.ca">directly</a>.</p>
+<p>To check your API key, just go to “Edit Profile” (in the top-right of
+the CensusMapper menu bar). Once you have your key, you can store it in
+your system environment so it is automatically used in API calls. To do
+so just enter
+<code>set_cancensus_api_key(&lt;your_api_key&gt;, install = TRUE)</code></p>
+</div>
+<div id="installing-cancensus" class="section level2">
+<h2>Installing cancensus</h2>
+<p>The stable version of <strong>cancensus</strong> can be easily
+installed from CRAN.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;cancensus&quot;</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">library</span>(cancensus)</span></code></pre></div>
+<p>Alternatively, the latest development version can be installed from
+Github using `remotes``.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># install.packages(&quot;devtools&quot;)</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>remotes<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">&quot;mountainmath/cancensus&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">library</span>(cancensus)</span></code></pre></div>
+<p>If you have not already done so, you can install the API keys and the
+data cache path. You can get your free API key when you sign up for a <a href="https://censusmapper.ca/">CensusMapper account</a> and check your
+profile. Additionally we recommend you set a permanent data cache path
+so that census data you query is stored persistently across sessions.
+<strong>Make sure to replace the filler text
+<code>&lt;your_api_key&gt;</code> and
+<code>&lt;local cache path&gt;</code> with your actual API key and local
+cache path.</strong></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Only need to install api key can cache path once</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">set_cancensus_api_key</span>(<span class="st">&#39;&lt;your_api_key&gt;&#39;</span>, <span class="at">install =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="fu">set_cancensus_cache_path</span>(<span class="st">&#39;&lt;local cache path&gt;&#39;</span>, <span class="at">install =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p>Data in the persistent cache can be managed via the functions
+<code>list_cancensus_cache</code> and
+<code>remove_from_cancensus_cache</code> if needed.</p>
+<p>If a project should have its own cache, for example to back up the
+data with the project for reproducibility, set the cache path without
+<code>install = TRUE</code> at the top of a script. This applies for the
+current R session and takes precedence over the cache path stored in
+your <code>.Renviron</code>. Use an absolute path and set it before the
+first call to <code>get_census</code>, see
+<code>?set_cancensus_cache_path</code> for details.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">set_cancensus_cache_path</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">&quot;data/cancensus_cache&quot;</span>))</span></code></pre></div>
+</div>
+</div>
+<div id="accessing-census-data" class="section level1">
+<h1>Accessing Census Data</h1>
+<p><strong>cancensus</strong> provides three different functions for
+retrieving Census data: * <code>get_census</code> to retrieve Census
+data and geography as a spatial dataset * <code>get_census_data</code>
+to retrieve Census data only as a flat data frame *
+<code>get_census_geometry</code> to retrieve Census geography only as a
+collection of spatial polygons.</p>
+<p><code>get_census</code> takes as inputs a dataset parameter, a list
+of specified regions, a vector of Census variables, and a Census
+geography level. You can specify one of three options for spatial
+formats: <code>NA</code> to return data only, <code>sf</code> to return
+an sf-class data frame, or <code>sp</code> to return a
+SpatialPolygonsDataFrame object.</p>
+<p>The <code>labels</code> parameter of <code>get_census</code> controls
+how columns are named and labelled. It currently defaults to
+<code>labels = &quot;detailed&quot;</code>, but this is planned to change to
+<code>labels = &quot;labelled&quot;</code> in a future version. To make sure your
+code keeps working when the default changes, set the
+<code>cancensus.labels</code> option to apply a choice to all
+<code>get_census</code> calls in a script or session, or set the
+<code>labels</code> parameter in individual calls. Without either one,
+<code>get_census</code> shows a message once per session pointing this
+out. We recommend adopting <code>&quot;labelled&quot;</code> early, and set the
+option for all calls in this vignette.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">options</span>(<span class="at">cancensus.labels =</span> <span class="st">&quot;labelled&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># Returns a data frame with data only</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>census_data <span class="ot">&lt;-</span> <span class="fu">get_census</span>(<span class="at">dataset=</span><span class="st">&#39;CA21&#39;</span>, <span class="at">regions=</span><span class="fu">list</span>(<span class="at">CMA=</span><span class="st">&quot;59933&quot;</span>),</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>                          <span class="at">vectors=</span><span class="fu">c</span>(<span class="st">&quot;v_CA21_434&quot;</span>,<span class="st">&quot;v_CA21_435&quot;</span>,<span class="st">&quot;v_CA21_440&quot;</span>),</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                          <span class="at">level=</span><span class="st">&#39;CSD&#39;</span>, <span class="at">use_cache =</span> <span class="cn">FALSE</span>, <span class="at">geo_format =</span> <span class="cn">NA</span>, <span class="at">quiet =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co"># Returns data and geography as an sf-class data frame</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>census_data <span class="ot">&lt;-</span> <span class="fu">get_census</span>(<span class="at">dataset=</span><span class="st">&#39;CA21&#39;</span>, <span class="at">regions=</span><span class="fu">list</span>(<span class="at">CMA=</span><span class="st">&quot;59933&quot;</span>),</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>                          <span class="at">vectors=</span><span class="fu">c</span>(<span class="st">&quot;v_CA21_434&quot;</span>,<span class="st">&quot;v_CA21_435&quot;</span>,<span class="st">&quot;v_CA21_440&quot;</span>),</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>                          <span class="at">level=</span><span class="st">&#39;CSD&#39;</span>, <span class="at">use_cache =</span> <span class="cn">FALSE</span>, <span class="at">geo_format =</span> <span class="st">&#39;sf&#39;</span>, <span class="at">quiet =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co"># Returns a SpatialPolygonsDataFrame object with data and geography</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>census_data <span class="ot">&lt;-</span> <span class="fu">get_census</span>(<span class="at">dataset=</span><span class="st">&#39;CA21&#39;</span>, <span class="at">regions=</span><span class="fu">list</span>(<span class="at">CMA=</span><span class="st">&quot;59933&quot;</span>),</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>                          <span class="at">vectors=</span><span class="fu">c</span>(<span class="st">&quot;v_CA21_434&quot;</span>,<span class="st">&quot;v_CA21_435&quot;</span>,<span class="st">&quot;v_CA21_440&quot;</span>),</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>                          <span class="at">level=</span><span class="st">&#39;CSD&#39;</span>, <span class="at">use_cache =</span> <span class="cn">FALSE</span>, <span class="at">geo_format =</span> <span class="st">&#39;sp&#39;</span>, <span class="at">quiet =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p><strong>cancensus</strong> utilizes caching to increase speed,
+minimize API token usage, and to make data available offline. Downloaded
+data is hashed and stored locally so if a call is made to access the
+same data, <strong>cancensus</strong> will read the local version
+instead. To force <strong>cancensus</strong> to refresh the data,
+specify <code>use_cache = FALSE</code> as a parameter for
+<code>get_census</code>.</p>
+<p>Additional parameters for advanced options can be viewed by running
+<code>?get_census</code>.</p>
+<div id="column-names-and-labels" class="section level2">
+<h2>Column names and labels</h2>
+<p>With <code>labels = &quot;labelled&quot;</code> Census variables are named by
+their vector, or by the name you give them when naming
+<code>vectors</code>, and the other columns have short names like
+<code>Name</code> and <code>Area</code> that are the same across
+datasets and with or without geographic data. The full description of
+each column is stored in its <code>&quot;label&quot;</code> attribute, which is
+displayed e.g. by the RStudio data viewer.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>census_data <span class="ot">&lt;-</span> <span class="fu">get_census</span>(<span class="at">dataset=</span><span class="st">&#39;CA21&#39;</span>, <span class="at">regions=</span><span class="fu">list</span>(<span class="at">CMA=</span><span class="st">&quot;59933&quot;</span>),</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>                          <span class="at">vectors=</span><span class="fu">c</span>(<span class="at">average_age=</span><span class="st">&quot;v_CA21_386&quot;</span>,<span class="st">&quot;v_CA21_434&quot;</span>),</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>                          <span class="at">level=</span><span class="st">&#39;CSD&#39;</span>, <span class="at">quiet =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="fu">names</span>(census_data)</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt;  [1] &quot;GeoUID&quot;      &quot;Type&quot;        &quot;Name&quot;        &quot;Area&quot;        &quot;Population&quot; </span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt;  [6] &quot;Dwellings&quot;   &quot;Households&quot;  &quot;PR_UID&quot;      &quot;CD_UID&quot;      &quot;CMA_UID&quot;    </span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt; [11] &quot;average_age&quot; &quot;v_CA21_434&quot;</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="fu">attr</span>(census_data<span class="sc">$</span>Population, <span class="st">&quot;label&quot;</span>)</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Population 2021&quot;</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="fu">attr</span>(census_data<span class="sc">$</span>average_age, <span class="st">&quot;label&quot;</span>)</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Average age&quot;</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="fu">attr</span>(census_data<span class="sc">$</span>v_CA21_434, <span class="st">&quot;label&quot;</span>)</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Occupied private dwellings by structural type of dwelling&quot;</span></span></code></pre></div>
+<p>The labels of the Census variables are also available through
+<code>label_vectors(census_data)</code>, and the <code>language</code>
+parameter of <code>get_census</code> switches labels to French where
+available.</p>
+<p>Recent versions of <code>ggplot2</code> use these labels as default
+axis and legend titles. Be careful with columns you compute yourself: R
+keeps attributes through arithmetic, so a derived column inherits a
+label that no longer describes it. Set the title explicitly with
+<code>labs()</code>, or drop the label with
+<code>as.numeric()</code>.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>dwellings_per_person <span class="ot">&lt;-</span> census_data<span class="sc">$</span>Dwellings <span class="sc">/</span> census_data<span class="sc">$</span>Population</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="fu">attr</span>(dwellings_per_person, <span class="st">&quot;label&quot;</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Dwellings 2021&quot;</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="fu">attr</span>(<span class="fu">as.numeric</span>(dwellings_per_person), <span class="st">&quot;label&quot;</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; NULL</span></span></code></pre></div>
+</div>
+<div id="census-datasets" class="section level2">
+<h2>Census Datasets</h2>
+<p><strong>cancensus</strong> can access Statistics Canada Census data
+for Census years 1996, 2001, 2006, 2011, 2016, and 2021. You can run
+<code>list_census_datasets</code> to check what datasets are currently
+available for access through the CensusMapper API.</p>
+<p>Thanks to contributions by the Canada Mortgage and Housing
+Corporation (CMHC), <strong>cancensus</strong> now includes additional
+Census-linked datasets as open-data releases. These include annual
+taxfiler data at the census tract level for tax years 2000 through 2017,
+which includes data on incomes and demographics, as well as specialized
+crosstabs for Structural type of dwelling by Document type, which
+details occupancy status for residences. These crosstabs are available
+for the 2001, 2006, 2011, and 2016 Census years at all levels starting
+with census tract.</p>
+<p>The function <code>list_census_datasets()</code> will show all
+available datasets alongside their metadata.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">list_census_datasets</span>()</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#&gt; # A tibble: 32 × 11</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt;    dataset description        attribution reference reference_url description_fr</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt;    &lt;chr&gt;   &lt;chr&gt;              &lt;chr&gt;       &lt;chr&gt;     &lt;chr&gt;         &lt;chr&gt;         </span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt;  1 CA01    2001 Canada Census StatCan 20… 92-378-X  https://www1… Recensement d…</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt;  2 CA01xSD 2001 Canada Censu… StatCan 20… 92-378-X  https://www1… Totalisation …</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt;  3 CA06    2006 Canada Census StatCan 20… 92-566-X  https://www1… Recensement d…</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt;  4 CA06xSD 2006 Canada Censu… StatCan 20… 92-566-X  https://www1… Totalisation …</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt;  5 CA11    2011 Canada Censu… StatCan 20… 98-301-X… https://www1… Recensement d…</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt;  6 CA11xSD 2011 Canada Censu… StatCan 20… 98-301-X  https://www1… Totalisation …</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt;  7 CA16    2016 Canada Census StatCan 20… 98-301-X  https://www1… Recensement d…</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt;  8 CA16xSD 2016 Canada Censu… StatCan 20… 98-301-X  https://www1… Totalisation …</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt;  9 CA1981  1981 Canada Census Canada Cen… 97-570-X… https://www1… Recensement d…</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt; 10 CA1986  1986 Canada Census Canada Cen… 97-570-X… https://www1… Recensement d…</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt; # ℹ 22 more rows</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; # ℹ 5 more variables: attribution_fr &lt;chr&gt;, reference_url_fr &lt;chr&gt;,</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; #   label &lt;chr&gt;, label_fr &lt;chr&gt;, geo_dataset &lt;chr&gt;</span></span></code></pre></div>
+<p>As other Census datasets become available via the CensusMapper API,
+they will be listed as output when calling
+<code>list_census_datasets()</code>.</p>
+</div>
+<div id="census-regions" class="section level2">
+<h2>Census Regions</h2>
+<p>Census data is aggregated at multiple <a href="#id_##%20Census%20Geographic%20Levels">geographic levels</a>.
+Census geographies at the national (C), provincial (PR), census
+metropolitan area (CMA), census agglomeration (CA), census division
+(CD), and census subdivision (CSD) are defined as named census
+regions.</p>
+<p>Canadian Census geography can change in between Census periods.
+<strong>cancensus</strong> provides a function,
+<code>list_census_regions(dataset)</code>, to display all named census
+regions and their corresponding id for a given census dataset.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">list_census_regions</span>(<span class="st">&quot;CA21&quot;</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; # A tibble: 5,628 × 8</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co">#&gt;    region name               level    pop municipal_status CMA_UID CD_UID PR_UID</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="co">#&gt;    &lt;chr&gt;  &lt;chr&gt;              &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;            &lt;chr&gt;   &lt;chr&gt;  &lt;chr&gt; </span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt;  1 01     Canada             C     3.70e7 &lt;NA&gt;             &lt;NA&gt;    &lt;NA&gt;   &lt;NA&gt;  </span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt;  2 35     Ontario            PR    1.42e7 Ont.             &lt;NA&gt;    &lt;NA&gt;   &lt;NA&gt;  </span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt;  3 24     Quebec             PR    8.50e6 Que.             &lt;NA&gt;    &lt;NA&gt;   &lt;NA&gt;  </span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt;  4 59     British Columbia   PR    5.00e6 B.C.             &lt;NA&gt;    &lt;NA&gt;   &lt;NA&gt;  </span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt;  5 48     Alberta            PR    4.26e6 Alta.            &lt;NA&gt;    &lt;NA&gt;   &lt;NA&gt;  </span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt;  6 46     Manitoba           PR    1.34e6 Man.             &lt;NA&gt;    &lt;NA&gt;   &lt;NA&gt;  </span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co">#&gt;  7 47     Saskatchewan       PR    1.13e6 Sask.            &lt;NA&gt;    &lt;NA&gt;   &lt;NA&gt;  </span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co">#&gt;  8 12     Nova Scotia        PR    9.69e5 N.S.             &lt;NA&gt;    &lt;NA&gt;   &lt;NA&gt;  </span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="co">#&gt;  9 13     New Brunswick      PR    7.76e5 N.B.             &lt;NA&gt;    &lt;NA&gt;   &lt;NA&gt;  </span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co">#&gt; 10 10     Newfoundland and … PR    5.11e5 N.L.             &lt;NA&gt;    &lt;NA&gt;   &lt;NA&gt;  </span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="co">#&gt; # ℹ 5,618 more rows</span></span></code></pre></div>
+<p>The <code>regions</code> parameter in <code>get_census</code>
+requires as input a list of region id strings that correspond to that
+regions geoid. You can combine different regions together into region
+lists.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># Retrieves Vancouver and Toronto</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="fu">list_census_regions</span>(<span class="st">&#39;CA21&#39;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>  <span class="fu">filter</span>(level <span class="sc">==</span> <span class="st">&quot;CMA&quot;</span>, name <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;Vancouver&quot;</span>,<span class="st">&quot;Toronto&quot;</span>))</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt; # A tibble: 2 × 8</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt;   region name      level     pop municipal_status CMA_UID CD_UID PR_UID</span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;  &lt;chr&gt;     &lt;chr&gt;   &lt;int&gt; &lt;chr&gt;            &lt;chr&gt;   &lt;chr&gt;  &lt;chr&gt; </span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">#&gt; 1 35535  Toronto   CMA   6202225 B                &lt;NA&gt;    &lt;NA&gt;   35    </span></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; 2 59933  Vancouver CMA   2642825 B                &lt;NA&gt;    &lt;NA&gt;   59</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a></span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>census_data <span class="ot">&lt;-</span> <span class="fu">get_census</span>(<span class="at">dataset=</span><span class="st">&#39;CA21&#39;</span>, <span class="at">regions=</span><span class="fu">list</span>(<span class="at">CMA=</span><span class="fu">c</span>(<span class="st">&quot;59933&quot;</span>,<span class="st">&quot;35535&quot;</span>)),</span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>                          <span class="at">vectors=</span><span class="fu">c</span>(<span class="st">&quot;v_CA21_434&quot;</span>,<span class="st">&quot;v_CA21_435&quot;</span>,<span class="st">&quot;v_CA21_440&quot;</span>),</span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a>                          <span class="at">level=</span><span class="st">&#39;CSD&#39;</span>, <span class="at">use_cache =</span> <span class="cn">FALSE</span>, <span class="at">quiet =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+</div>
+<div id="census-geographic-levels" class="section level2">
+<h2>Census Geographic Levels</h2>
+<p>Census data accessible through <strong>cancensus</strong> comes is
+available in a number of different aggregation levels including:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>Description</th>
+<th align="center">Count in Census 2016</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>C</td>
+<td>Canada (total)</td>
+<td align="center">1</td>
+</tr>
+<tr class="even">
+<td>PR</td>
+<td>Provinces/Territories</td>
+<td align="center">13</td>
+</tr>
+<tr class="odd">
+<td>CMA</td>
+<td>Census Metropolitan Area</td>
+<td align="center">35</td>
+</tr>
+<tr class="even">
+<td>CA</td>
+<td>Census Agglomeration</td>
+<td align="center">14</td>
+</tr>
+<tr class="odd">
+<td>CD</td>
+<td>Census Division</td>
+<td align="center">287</td>
+</tr>
+<tr class="even">
+<td>CSD</td>
+<td>Census Subdivision</td>
+<td align="center">713</td>
+</tr>
+<tr class="odd">
+<td>CT</td>
+<td>Census Tracts</td>
+<td align="center">5621</td>
+</tr>
+<tr class="even">
+<td>DA</td>
+<td>Dissemination Area</td>
+<td align="center">56589</td>
+</tr>
+<tr class="odd">
+<td>EA</td>
+<td>Enumeration Area (1996 only)</td>
+<td align="center">-</td>
+</tr>
+<tr class="even">
+<td>DB</td>
+<td>Dissemination Block (2001-2016)</td>
+<td align="center">489676</td>
+</tr>
+<tr class="odd">
+<td>Regions</td>
+<td>Named Census Region</td>
+<td align="center"></td>
+</tr>
+</tbody>
+</table>
+<p>Selecting <code>regions = &quot;59933&quot;</code> and
+<code>level = &quot;CT&quot;</code> will return data for all 478 census tracts in
+the Vancouver Census Metropolitan Area. Selecting
+<code>level = &quot;DA&quot;</code> will return data for all 3450 dissemination
+areas and selecting <code>level = &quot;DB&quot;</code> will retrieve data for
+15,197 dissemination block. Working with CT, DA, EA, and especially DB
+level data significantly increases the size of data downloads and API
+usage. To help minimize additional overhead, <strong>cancensus</strong>
+supports local data caching to reduce usage and load times.</p>
+<p>Setting <code>level = &quot;Regions&quot;</code> will produce data strictly for
+the selected region without any tiling of data at lower census
+aggregation levels levels.</p>
+</div>
+</div>
+<div id="working-with-census-variables" class="section level1">
+<h1>Working with Census Variables</h1>
+<p>Census data contains thousands of different geographic regions as
+well as thousands of unique variables. In addition to enabling
+programmatic and reproducible access to Census data,
+<strong>cancensus</strong> has a number of tools to help users find the
+data they are looking for.</p>
+<div id="displaying-available-census-variables" class="section level2">
+<h2>Displaying available Census variables</h2>
+<p>Run <code>list_census_vectors(dataset)</code> to view all available
+Census variables for a given dataset.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">list_census_vectors</span>(<span class="st">&quot;CA21&quot;</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="co">#&gt; # A tibble: 7,718 × 7</span></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="co">#&gt;    vector    type   label                units parent_vector aggregation details</span></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co">#&gt;    &lt;chr&gt;     &lt;fct&gt;  &lt;chr&gt;                &lt;fct&gt; &lt;chr&gt;         &lt;chr&gt;       &lt;chr&gt;  </span></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="co">#&gt;  1 v_CA21_1  Total  Population, 2021     Numb… &lt;NA&gt;          Additive    CA 202…</span></span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a><span class="co">#&gt;  2 v_CA21_2  Total  Population, 2016     Numb… &lt;NA&gt;          Additive    CA 202…</span></span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a><span class="co">#&gt;  3 v_CA21_3  Total  Population percenta… Numb… &lt;NA&gt;          Average of… CA 202…</span></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a><span class="co">#&gt;  4 v_CA21_4  Total  Total private dwell… Numb… &lt;NA&gt;          Additive    CA 202…</span></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a><span class="co">#&gt;  5 v_CA21_5  Total  Private dwellings o… Numb… v_CA21_4      Additive    CA 202…</span></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a><span class="co">#&gt;  6 v_CA21_6  Total  Population density … Ratio &lt;NA&gt;          Average of… CA 202…</span></span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a><span class="co">#&gt;  7 v_CA21_7  Total  Land area in square… Numb… &lt;NA&gt;          Additive    CA 202…</span></span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a><span class="co">#&gt;  8 v_CA21_8  Total  Total - Age          Numb… &lt;NA&gt;          Additive    CA 202…</span></span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a><span class="co">#&gt;  9 v_CA21_9  Male   Total - Age          Numb… &lt;NA&gt;          Additive    CA 202…</span></span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a><span class="co">#&gt; 10 v_CA21_10 Female Total - Age          Numb… &lt;NA&gt;          Additive    CA 202…</span></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a><span class="co">#&gt; # ℹ 7,708 more rows</span></span></code></pre></div>
+</div>
+<div id="variable-characteristics" class="section level2">
+<h2>Variable characteristics</h2>
+<p>For each variable (vector) in that Census dataset, this shows:</p>
+<ul>
+<li>Vector: short variable code</li>
+<li>Type: variables are provided as aggregates of female responses, male
+responses, or total (male+female) responses</li>
+<li>Label: detailed variable name</li>
+<li>Units: provides information about whether the variable represents a
+count integer, a ratio, a percentage, or a currency figure</li>
+<li>Parent_vector: shows the immediate hierarchical parent category for
+that variable, where appropriate</li>
+<li>Aggregation: indicates how the variable should be aggregated with
+others, whether it is additive or if it is an average of another
+variable</li>
+<li>Description: a rough description of a variable based on its
+hierarchical structure. This is constructed by
+<strong>cancensus</strong> by recursively traversing the labels for
+every variable’s hierarchy, and facilitates searching for specific
+variables using key terms.</li>
+</ul>
+</div>
+<div id="variable-search" class="section level2">
+<h2>Variable search</h2>
+<p>Each Census dataset features numerous variables making it a bit of a
+challenge to find the exact variable you are looking for. There is a
+function, <code>find_census_vectors()</code>, for searching through
+Census variable metadata in a few different ways. There are three types
+of searches possible using this function: exact search, which simply
+looks for exact string matches for a given query against the vector
+dataset; keyword search, which breaks vector metadata into unigram
+tokens and then tries to find the vectors with the greatest number of
+unique matches; and, semantic search which works better with search
+phrases and has tolerance for inexact searches. Switching between search
+modes is done using the <code>query_type</code> argument when calling
+<code>find_census_variables()</code> function.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># Find the variable indicating the number of people of Austrian ethnic origin</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="fu">find_census_vectors</span>(<span class="st">&quot;Australia&quot;</span>, <span class="at">dataset =</span> <span class="st">&quot;CA16&quot;</span>, <span class="at">type =</span> <span class="st">&quot;total&quot;</span>, <span class="at">query_type =</span> <span class="st">&quot;exact&quot;</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="co">#&gt; # A tibble: 2 × 4</span></span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="co">#&gt;   vector      type  label      details                                          </span></span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;       &lt;fct&gt; &lt;chr&gt;      &lt;chr&gt;                                            </span></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="co">#&gt; 1 v_CA16_3813 Total Australia  25% Data; Citizenship and Immigration; Total - S…</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="co">#&gt; 2 v_CA16_4809 Total Australian 25% Data; Minority / Origin; Total - Ethnic orig…</span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="fu">find_census_vectors</span>(<span class="st">&quot;Australia origin&quot;</span>, <span class="at">dataset =</span> <span class="st">&quot;CA16&quot;</span>, <span class="at">type =</span> <span class="st">&quot;total&quot;</span>, <span class="at">query_type =</span> <span class="st">&quot;semantic&quot;</span>)</span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="co">#&gt; # A tibble: 279 × 4</span></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="co">#&gt;    vector      type  label                                 details              </span></span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="co">#&gt;    &lt;chr&gt;       &lt;fct&gt; &lt;chr&gt;                                 &lt;chr&gt;                </span></span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a><span class="co">#&gt;  1 v_CA16_3813 Total Australia                             25% Data; Citizenshi…</span></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co">#&gt;  2 v_CA16_4002 Total North American Aboriginal origins     25% Data; Minority /…</span></span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a><span class="co">#&gt;  3 v_CA16_4005 Total First Nations (North American Indian) 25% Data; Minority /…</span></span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="co">#&gt;  4 v_CA16_4008 Total Inuit                                 25% Data; Minority /…</span></span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="co">#&gt;  5 v_CA16_4011 Total Métis                                 25% Data; Minority /…</span></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="co">#&gt;  6 v_CA16_4014 Total Other North American origins          25% Data; Minority /…</span></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="co">#&gt;  7 v_CA16_4017 Total Acadian                               25% Data; Minority /…</span></span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a><span class="co">#&gt;  8 v_CA16_4020 Total American                              25% Data; Minority /…</span></span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a><span class="co">#&gt;  9 v_CA16_4023 Total Canadian                              25% Data; Minority /…</span></span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a><span class="co">#&gt; 10 v_CA16_4026 Total New Brunswicker                       25% Data; Minority /…</span></span>
+<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a><span class="co">#&gt; # ℹ 269 more rows</span></span>
+<span id="cb13-24"><a href="#cb13-24" tabindex="-1"></a></span>
+<span id="cb13-25"><a href="#cb13-25" tabindex="-1"></a><span class="fu">find_census_vectors</span>(<span class="st">&quot;Australian ethnic&quot;</span>, <span class="at">dataset =</span> <span class="st">&quot;CA16&quot;</span>, <span class="at">type =</span> <span class="st">&quot;total&quot;</span>, <span class="at">query_type =</span> <span class="st">&quot;keyword&quot;</span>, <span class="at">interactive =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb13-26"><a href="#cb13-26" tabindex="-1"></a><span class="co">#&gt; # A tibble: 1 × 4</span></span>
+<span id="cb13-27"><a href="#cb13-27" tabindex="-1"></a><span class="co">#&gt;   vector      type  label      details                                          </span></span>
+<span id="cb13-28"><a href="#cb13-28" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;       &lt;fct&gt; &lt;chr&gt;      &lt;chr&gt;                                            </span></span>
+<span id="cb13-29"><a href="#cb13-29" tabindex="-1"></a><span class="co">#&gt; 1 v_CA16_4809 Total Australian 25% Data; Minority / Origin; Total - Ethnic orig…</span></span></code></pre></div>
+</div>
+<div id="managing-variable-hierarchy" class="section level2">
+<h2>Managing variable hierarchy</h2>
+<p>Census variables are frequently hierarchical. As an example, consider
+the variable for the number of people of Austrian ethnic background. We
+can select that vector and quickly look up its entire hierarchy using
+<code>parent_census_vectors</code> on a vector list.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">list_census_vectors</span>(<span class="st">&quot;CA16&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  <span class="fu">filter</span>(vector <span class="sc">==</span> <span class="st">&quot;v_CA16_4092&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>  <span class="fu">parent_census_vectors</span>()</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co">#&gt; # A tibble: 3 × 7</span></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt;   vector      type  label                units parent_vector aggregation details</span></span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;       &lt;fct&gt; &lt;chr&gt;                &lt;fct&gt; &lt;chr&gt;         &lt;chr&gt;       &lt;chr&gt;  </span></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co">#&gt; 1 v_CA16_4089 Total Western European or… Numb… v_CA16_4044   Additive    CA 201…</span></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="co">#&gt; 2 v_CA16_4044 Total European origins     Numb… v_CA16_3999   Additive    CA 201…</span></span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co">#&gt; 3 v_CA16_3999 Total Total - Ethnic orig… Numb… &lt;NA&gt;          Additive    CA 201…</span></span></code></pre></div>
+<p>Sometimes we want to traverse the hierarchy in the opposite
+direction. This is frequently required when looking to compare different
+variable stems that share the same aggregate variable. As an example, if
+we want to look the total count of Northern European ethnic origin
+respondents disaggregated by individual countries, it is pretty easy to
+do so.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># Find the variable indicating the Northern European aggregate</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a><span class="fu">find_census_vectors</span>(<span class="st">&quot;Northern European&quot;</span>, <span class="at">dataset =</span> <span class="st">&quot;CA16&quot;</span>, <span class="at">type =</span> <span class="st">&quot;Total&quot;</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="co">#&gt; # A tibble: 7 × 4</span></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="co">#&gt;   vector      type  label                                                details</span></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;       &lt;fct&gt; &lt;chr&gt;                                                &lt;chr&gt;  </span></span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="co">#&gt; 1 v_CA16_4122 Total Northern European origins (except British Isles ori… 25% Da…</span></span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="co">#&gt; 2 v_CA16_4125 Total Danish                                               25% Da…</span></span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a><span class="co">#&gt; 3 v_CA16_4128 Total Finnish                                              25% Da…</span></span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="co">#&gt; 4 v_CA16_4131 Total Icelandic                                            25% Da…</span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="co">#&gt; 5 v_CA16_4134 Total Norwegian                                            25% Da…</span></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="co">#&gt; 6 v_CA16_4137 Total Swedish                                              25% Da…</span></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a><span class="co">#&gt; 7 v_CA16_4140 Total Northern European origins, n.i.e.                    25% Da…</span></span></code></pre></div>
+<p>The search result shows that the vector <strong>v_CA16_4092</strong>
+represents the aggregate for all Northern European origins. The
+<code>child_census_vectors</code> function can return a list of its
+constituent underlying variables.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="co"># Show all child variable leaves</span></span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a><span class="fu">list_census_vectors</span>(<span class="st">&quot;CA16&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>  <span class="fu">filter</span>(vector <span class="sc">==</span> <span class="st">&quot;v_CA16_4122&quot;</span>) <span class="sc">%&gt;%</span> <span class="fu">child_census_vectors</span>(<span class="at">leaves =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a><span class="co">#&gt; # A tibble: 6 × 7</span></span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a><span class="co">#&gt;   vector      type  label                units parent_vector aggregation details</span></span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;       &lt;fct&gt; &lt;chr&gt;                &lt;fct&gt; &lt;chr&gt;         &lt;chr&gt;       &lt;chr&gt;  </span></span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a><span class="co">#&gt; 1 v_CA16_4125 Total Danish               Numb… v_CA16_4122   Additive    CA 201…</span></span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a><span class="co">#&gt; 2 v_CA16_4128 Total Finnish              Numb… v_CA16_4122   Additive    CA 201…</span></span>
+<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a><span class="co">#&gt; 3 v_CA16_4131 Total Icelandic            Numb… v_CA16_4122   Additive    CA 201…</span></span>
+<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a><span class="co">#&gt; 4 v_CA16_4134 Total Norwegian            Numb… v_CA16_4122   Additive    CA 201…</span></span>
+<span id="cb16-11"><a href="#cb16-11" tabindex="-1"></a><span class="co">#&gt; 5 v_CA16_4137 Total Swedish              Numb… v_CA16_4122   Additive    CA 201…</span></span>
+<span id="cb16-12"><a href="#cb16-12" tabindex="-1"></a><span class="co">#&gt; 6 v_CA16_4140 Total Northern European o… Numb… v_CA16_4122   Additive    CA 201…</span></span></code></pre></div>
+<p>The <code>leaves = TRUE</code> parameter specifies whether
+intermediate aggregates are included or not. If <code>TRUE</code> then
+only the lowest level variables are returns - the “leaves” of the
+hierarchical tree.</p>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
